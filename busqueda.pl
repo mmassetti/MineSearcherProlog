@@ -7,4 +7,4 @@
 /* Generar vecinos */
 generar_vecinos(Estado,Vecinos):-
     findall([EstadoSiguiente,Operacion,Costo], ejecutar_accion(Estado,EstadoSiguiente,Operacion,Costo), Vecinos).
-    
+
