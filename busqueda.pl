@@ -3,13 +3,18 @@
 :-consult(acciones).
 
 :-dynamic ejecutar_accion/4.
-:-dynamic frontera/1.  /* Guardo estado y valor de la heuristica */
+:-dynamic frontera/1.  
 :-dynamic visitados/1.
 
 /* Generar vecinos */
 generar_vecinos([Estado,Camino,CostoNodo,_],Vecinos):-
-    findall([EstadoSiguiente,[Operacion|Camino],CostoAccion], ejecutar_accion(Estado,EstadoSiguiente,Operacion,CostoAccion), Vecinos),
-    CostoNodo is CostoNodo + CostoAccion.
+    findall([EstadoSiguiente,[Operacion|Camino],CostoTotal],accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal),Vecinos).
+
+/* Cascara accion agente */
+accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal):-
+    ejecutar_accion(Estado,EstadoSiguiente,Operacion,CostoAccion),
+    CostoTotal is CostoNodo + CostoAccion.
+
 
 /* Agregar vecinos */
 agregar_vecinos([]):-!.
@@ -48,7 +53,6 @@ agregar_vecinos([X|ListaVecinos]):-
 algoritmoA*(Nodo):-
     minimo_frontera(Nodo),
     esMeta(Nodo).
-   /* reverse(Camino,Solucion). */
 
 /* Caso Recursivo */
 algoritmoA*(Nodo):-
@@ -64,8 +68,9 @@ algoritmoA*(Nodo):-
 /* buscar_plan(+EInicial,-Plan,-Destino,-Costo)  */
 buscar_plan(EstadoInicial,Plan,Destino,Costo):-
     /* En frontera tengo nodos de la forma: [Estado,Camino,CostoNodo,CostoTotal] */
-    limpiar_estructuras(),, 
-    asserta(frontera(EstadoInicial,[],0,0)),
+    /* El EstadoInicial es de la forma: [Pos,Dir,ListaPosesiones,CargaPendiente] */
+    limpiar_estructuras(),
+    assertz(frontera([EstadoInicial,[],0,0])),
     algoritmoA*(NodoMeta),
     NodoMeta = [EstadoMeta,Camino,Costo,_],
     EstadoMeta= [Destino,_,_,_],
@@ -74,20 +79,6 @@ buscar_plan(EstadoInicial,Plan,Destino,Costo):-
 buscar_plan(_,_,_,_):-
 	writeln('No es posible encontrar un plan para este estado'),
 	fail.
-
-
-    /* agregar a frontera un nodo inicial con el estado inicial */
-    /* llamar al algoritmoA* */
-    /* este algoritmoA* devuelve el nodo meta (forma Estado,Camino,Costo,CostoTotal)) */
-    /* en estado tengo Pos (el destino donde termino) */
-    /* camino, invertido es el Plan */
-    /* Costo es el Costo del plan */
-
-   /* EstadoInicial = [Pos,Dir,] */
-
-
-
-
 
 /*------------------------HEURISTICAS------------------------------*/
     /* Desde la mas restrictiva a la mas general */
@@ -104,26 +95,59 @@ obtenerHeuristica(Estado,ValorH):-
         menorDistanciaAMeta(Pos,ValorH).
         
 
-
-
-
-
-
 /*------------------------------------------------------------------*/
 
 /*---------------------------AUXILIARES-----------------------------*/
 
-/* Auxiliar Minimo frontera */
+/*minimo_frontera(MinimoNodo):-
+    findall(Nodo,frontera(Nodo),ListaNodosFrontera),
+    minimoF(MinimoNodo,ListaNodosFrontera). 
+
+minimoF(Nodo,[X|ListaNodos]):-
+    minimoAux(Nodo,X,ListaNodos).
+
+minimoAux(Nodo,Nodo,[]):-!.
+
+minimoAux(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
+    Nodo1= [_,_,_,Costo1],
+    Nodo2= [_,_,_,Costo2],
+    Costo1=<Costo2,
+    !,
+    minimoAux(Nodo1,Nodo3,ListaNodos).
+
+minimoAux(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
+    Nodo3 = [_,_,_,Costo3],
+    Nodo2 = [_,_,_,Costo2],
+    Costo3>=Costo2,
+    minimoAux(Nodo1,Nodo2,ListaNodos).*/
+
+
+
+
+
+
+
+
+
+
+
+/* minimo_frontera(-MinimoNodo) */
 minimo_frontera(MinimoNodo):-
-   N1= [_,_,_,Costo1],
-   N2= [_,_,_,Costo2],
-   frontera(N1),
-   forall(frontera(N2),Costo1 =< Costo2),
-   MinimoNodo is N1.
-    
+    findall(Nodo,frontera(Nodo),[PrimerNodo|Resto]),
+    minimo(PrimerNodo,Resto,MinimoNodo).
+
+/* minimo(+Nodo,+Resto,+MinimoNodo) */
+minimo(Nodo,[],Nodo):- !.
+
+minimo([Estado1,Camino1,CostoNodo1,CostoTotal1],[[Estado2,Camino2,CostoNodo2,CostoTotal2]|Resto],Minimo):-
+    /*  [Estado,Camino,CostoNodo,CostoTotal]*/
+     CostoTotal1 < CostoTotal2 -> minimo([Estado1,Camino1,CostoNodo1,CostoTotal1],Resto,Minimo)
+                                 ; 
+                                 minimo([Estado2,Camino2,CostoNodo2,CostoTotal2],Resto,Minimo).
+
 /* esMeta(+Estado) 
-    No debe tener la carga pendiente 
-    Tiene que tener activado el detonador
+    -No debe tener la carga pendiente 
+    -Tiene que tener activado el detonador
     Tiene que estar en el sitio de detonación */
 
 esMeta(Nodo):-
@@ -150,12 +174,14 @@ metaDeMenorDistancia(Pos,[Meta], Valor):- distanciaManhattan(Pos, Meta, Valor).
 distanciaManhattan([Pos1X, Pos1Y], [Pos2X, Pos2Y], Valor):- Valor is abs(Pos1X-Pos2X) + abs(Pos1Y-Pos2Y).
 
 
+/* Se vacian estructuras para realizar nuevas consultas sin necesidad de cerrar y abrir nuevamente el archivo */
+limpiar_estructuras():-
+	retractall(frontera(_)),
+	retractall(visitados(_)).
+
+
 
 /*********************************************************************/
-
-
-
-
 
 
 
