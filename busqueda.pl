@@ -7,9 +7,9 @@
 :-dynamic visitados/1.
 
 /* Generar vecinos */
-generar_vecinos([Estado,Camino,CostoNodo,_],Vecinos):-
+generar_vecinos([Estado,Camino,CostoNodo,_],VecinosAgregar):-
     findall([EstadoSiguiente,[Operacion|Camino],CostoTotal],accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal),Vecinos).
-    /*control_visitados(Vecinos,VecinosAgregar).*/
+    control_visitados(Vecinos,VecinosAgregar).
 
 /* Cascara accion agente */
 accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal):-
@@ -197,25 +197,22 @@ control_visitados(Vecinos,VecinosAgregar):-
 
 %caso 2
 control_visitados(Vecinos,VecinosAgregar):-
-	Vecinos=[Nodo|RestoVecinos],
-	Nodo=nodo(Estado,Camino,G,H),
-	F is G+H,
-	visitados(nodo(Estado,Camino1,G1,H1)),
-	F1 is G1+H1,
-	F<F1,!,
-	retract(visitados(nodo(Estado,Camino1,G1,H1))),
-	assertz(frontera(nodo(Estado,Camino,G,H))),
-	control_visitados(RestoVecinos,VecinosAgregar).
+    Vecinos=[Nodo|RestoVecinos],
+    Nodo= [Estado,Camino,CostoNodo,CostoTotal],
+    visitados([Estado,Camino1,CostoNodo1,CostoTotal1]),
+    CostoTotal<CostoTotal1,
+    retract(visitados([Estado,Camino1,CostoNodo1,CostoTotal1])),
+    assertz(frontera(nodo(Estado,Camino,CostoNodo,CostoTotal))),
+    control_visitados(RestoVecinos,VecinosAgregar).
 
 %caso 3: para frontera
 control_visitados(Vecinos,VecinosAgregar):-
-	Vecinos=[Nodo|RestoVecinos],
-	Nodo=nodo(Estado,_,G,H),
-	F is G+H,
-	frontera(nodo(Estado,_,G1,H1)),
-	F1 is G1+H1,
-	F>=F1,!,
-	control_visitados(RestoVecinos,VecinosAgregar).
+    Vecinos=[Nodo|RestoVecinos],
+    Nodo= [Estado,_,CostoNodo,CostoTotal],
+    frontera([Estado,Camino1,CostoNodo1,CostoTotal1]),
+    CostoTotal >= CostoTotal1,!,
+    control_visitados(RestoVecinos,VecinosAgregar).
+	
 
 %caso 3:para visitados
 control_visitados(Vecinos,VecinosAgregar):-

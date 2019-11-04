@@ -80,19 +80,23 @@ juntar_llave([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[Pos,Dir,Nueva
     estaEn([l,NombreL],Pos),
     not(member([l,NombreL],ListaPosesiones)),
     Costo is 1,
-    append(ListaPosesiones,[[l,NombreL]],NuevaListaPosesiones).
+    append(ListaPosesiones,[[l,NombreL]],ListaAuxiliar),
+    sort(ListaAuxiliar,NuevaListaPosesiones).
 
 juntar_carga([Pos, Dir, ListaPosesiones,si],[Pos,Dir,NuevaListaPosesiones,si],Costo):-
     estaEn([c,NombreC],Pos),
     not(member([c,NombreC],ListaPosesiones)),
     Costo is 3,
-    append(ListaPosesiones,[[c,NombreC]],NuevaListaPosesiones).
+    append(ListaPosesiones,[[c,NombreC]],ListaAuxiliar),
+    sort(ListaAuxiliar,NuevaListaPosesiones).
 
  juntar_detonador([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
     estaEn([d,NombreD,Activo],Pos),
     not(member([d,NombreD,Activo],ListaPosesiones)),
     Costo is 2,
-    append(ListaPosesiones,[[d,NombreD,Activo]],NuevaListaPosesiones).
+    append(ListaPosesiones,[[d,NombreD,Activo]],ListaAuxiliar),
+    sort(ListaAuxiliar,NuevaListaPosesiones).
+
 
 dejar_carga([Pos,Dir,ListaPosesiones,si],[Pos,Dir,NuevaListaPosesiones,no],Costo):-
     member([c,NombreC],ListaPosesiones),
