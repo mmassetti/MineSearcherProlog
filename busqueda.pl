@@ -208,8 +208,8 @@ control_visitados(Vecinos,VecinosAgregar):-
 %caso 3: para frontera
 control_visitados(Vecinos,VecinosAgregar):-
     Vecinos=[Nodo|RestoVecinos],
-    Nodo= [Estado,_,CostoNodo,CostoTotal],
-    frontera([Estado,Camino1,CostoNodo1,CostoTotal1]),
+    Nodo= [Estado,_,_,CostoTotal],
+    frontera([Estado,_,_,CostoTotal1]),
     CostoTotal >= CostoTotal1,!,
     control_visitados(RestoVecinos,VecinosAgregar).
 	
