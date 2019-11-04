@@ -36,20 +36,20 @@ libreDeObstaculos(PosDestino):-
 ejecutar_accion(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],caminar,Costo):-
 	caminar(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
-ejecutar_accion(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],girar,Costo):-
+ejecutar_accion(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],girar(DirDestino),Costo):-
 	girar(Estado,DirDestino,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
 ejecutar_accion(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],saltar,Costo):-
 	saltar(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
 ejecutar_accion(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],juntar_llave,Costo):-
-	juntar_llave(Estado,Llave,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
+	juntar_llave(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
 ejecutar_accion(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],juntar_carga,Costo):-
-	juntar_carga(Estado,Carga,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
+	juntar_carga(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
 ejecutar_accion(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],juntar_detonador,Costo):-
-	juntar_detonador(Estado,Detonador,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
+	juntar_detonador(Estado,[Pos,DirDestino,ListaPosesiones,ColocacionCargaPendiente],Costo).
 
 ejecutar_accion(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],dejar_carga,Costo):-
 	dejar_carga(Estado,[Pos,Dir,ListaPosesiones,ColocacionCargaPendiente],Costo).
@@ -76,19 +76,19 @@ saltar([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[PosDestino,Dir,List
     Altura < 4,  /*Con altura menor a 4 */
     Costo is 1 + CostoSuelo.
 
-juntar_llave([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[l,NombreL],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
+juntar_llave([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
     estaEn([l,NombreL],Pos),
     not(member([l,NombreL],ListaPosesiones)),
     Costo is 1,
     append(ListaPosesiones,[l,NombreL],NuevaListaPosesiones).
 
-juntar_carga([Pos, Dir, ListaPosesiones,si],[c,NombreC],[Pos,Dir,NuevaListaPosesiones,si],Costo):-
+juntar_carga([Pos, Dir, ListaPosesiones,si],[Pos,Dir,NuevaListaPosesiones,si],Costo):-
     estaEn([c,NombreC],Pos),
     not(member([c,NombreC],ListaPosesiones)),
     Costo is 3,
     append(ListaPosesiones,[c,NombreC],NuevaListaPosesiones).
 
- juntar_detonador([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[d,NombreD,_],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
+ juntar_detonador([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
     estaEn([d,NombreD,_],Pos),
     not(member([d,NombreD,_],ListaPosesiones)),
     Costo is 2,

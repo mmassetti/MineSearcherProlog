@@ -172,10 +172,10 @@ minimo([Estado1,Camino1,CostoNodo1,CostoTotal1],[[Estado2,Camino2,CostoNodo2,Cos
 
 /* esMeta(+Estado) */
 esMeta(Nodo):-
+    trace,
     Nodo=[Estado,_,_,_],
-    Estado=[Pos,_,ListaPosesiones,no],
-    member([d,_,_],ListaPosesiones), 
-    sitioDetonacion(Pos).
+    Estado=[_,_,ListaPosesiones,no],
+    member([d,_,si],ListaPosesiones). 
 
 limpiar_estructuras():-
 	retractall(frontera(_)),
