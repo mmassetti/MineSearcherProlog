@@ -20,36 +20,24 @@ accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal):-
 agregar_vecinos([]):-!.
 
 agregar_vecinos([X|ListaVecinos]):-
-    visitados(X),
+    X= [Estado,_,_],
+    visitados(Estado),
     agregar_vecinos(ListaVecinos).
 
 agregar_vecinos([X|ListaVecinos]):-
     X= [Estado,Camino,CostoNodo],
-    not(visitados(X)),
-    asserta(visitados(X)),
-    fakeObtenerHeuristica(X,ValorH),
+    not(visitados(Estado)),
+    asserta(visitados(Estado)),
+    obtenerHeuristica(X,ValorH),
     CostoTotal is CostoNodo+ ValorH,
     Nuevo= [Estado,Camino,CostoNodo,CostoTotal],
     asserta(frontera(Nuevo)),
     agregar_vecinos(ListaVecinos).
 
 
-
-/* Algoritmo A* */
-
-/*
-1) Sacar minimo de la frontera
-2) Fijarse si es meta 
-3) Si no es meta generar los vecinos
-4) Agrego los vecinos a la frontera (control de ciclos)
-5) Llamo recursivo a A* 
-
-*/
-
-
 /* algoritmoA*(+Costo,-Camino) */
 
-/* Caso Base : Saco el minimo de la frontera y es meta */
+/* Caso Base :  */
 algoritmoA*(Nodo):-
     minimo_frontera(Nodo),
     esMeta(Nodo).
@@ -57,14 +45,12 @@ algoritmoA*(Nodo):-
 /* Caso Recursivo */
 algoritmoA*(Nodo):-
     minimo_frontera(Minimo),
-    not(esMeta(Minimo)),
     generar_vecinos(Minimo,Vecinos),
     retract(frontera(Minimo)),
     agregar_vecinos(Vecinos),
     algoritmoA*(Nodo).
 
 
-/* buscar_plan */
 /* buscar_plan(+EInicial,-Plan,-Destino,-Costo)  */
 buscar_plan(EstadoInicial,Plan,Destino,Costo):-
     /* En frontera tengo nodos de la forma: [Estado,Camino,CostoNodo,CostoTotal] */
@@ -81,56 +67,95 @@ buscar_plan(_,_,_,_):-
 	fail.
 
 /*------------------------HEURISTICAS------------------------------*/
-    /* Desde la mas restrictiva a la mas general */
-fakeObtenerHeuristica(Estado,0).
 
+/* Desde la mas restrictiva a la mas general */
 
-
-/* Caso 1 : El minero tiene el detonador y ya coloco la carga 
-    la heuristica devuelve la menor distancia a un sitio de detonacion
-*/
-obtenerHeuristica(Estado,ValorH):-
+/* Caso 1 : TIENE detonador, COLOCO carga --> Hay que ir a un sitio de detonacion */
+obtenerHeuristica(Nodo,ValorH):-
+        /*En Nodo viene, por ejemplo:  [[[12,2],e,[[d,d1,no],[c,c1]],no],[caminar],3] */
+        Nodo= [Estado,_,_],
         Estado= [Pos,_,ListaPosesiones,no],
         member([d,_,_],ListaPosesiones),
-        menorDistanciaAMeta(Pos,ValorH).
-        
+        findall(Posicion, sitioDetonacion(Posicion), [Primera|Resto]),
+	    menorDistanciaASitioDetonacion(Pos, Primera, Resto, ValorH).
+    
+/* Caso 2 : NO TIENE detonador, COLOCO carga  --> Se devuelve distancia a detonador */
+obtenerHeuristica(Nodo,ValorH):-
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,no],
+    \+ member([d,_,_], ListaPosesiones),
+    estaEn([d,_,_],[PosXDet,PosYDet]),
+    Pos = [X,Y],
+    ValorH is abs(X-PosXDet) + abs(Y-PosYDet).
+
+/* Caso 3 : TIENE detonador , TIENE carga , NO COLOCO carga  --> Se devuelve distancia a colocacion de carga */
+obtenerHeuristica(Nodo,ValorH):-
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,si],
+    member([d,_,_],ListaPosesiones),
+    member([c,_,_],ListaPosesiones),
+    ubicacionCarga([PosXUbic,PosYUbic]),
+    Pos = [X,Y],
+    ValorH is abs(X-PosXUbic) + abs(Y-PosYUbic).
+
+/* Caso 4 : TIENE detonador , NO TIENE carga, NO COLOCO carga --> Retorna distancia a carga */
+obtenerHeuristica(Nodo,ValorH):-
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,si],
+    member([d,_,_],ListaPosesiones),
+    \+ member([c,_,_],ListaPosesiones),
+    estaEn([c,_],[PosXCarga,PosYCarga]),
+    Pos = [X,Y],
+    ValorH is abs(X-PosXCarga) + abs(Y-PosYCarga).
+
+/* Caso 5 : NO TIENE detonador, TIENE carga, NO COLOCO carga 
+            --> Se devuelve menor distancia a posicion de carga o a detonador */
+obtenerHeuristica(Nodo,ValorH):-
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,si],     
+    \+ member([d,_,_], ListaPosesiones), 
+    member([c,_,_],ListaPosesiones),
+    ubicacionCarga([PosXUbic,PosYUbic]),
+    estaEn([d,_,_],[PosXDet,PosYDet]),
+    Pos = [X,Y],
+    DistanciaUbicCarga is abs(X-PosXUbic) + abs(Y-PosYUbic),
+    DistanciaDetonador is abs(X-PosXDet) + abs(Y-PosYDet),
+    ValorH is min(DistanciaUbicCarga,DistanciaDetonador).
+
+/* Caso 6 : NO TIENE detonador, NO TIENE carga, NO COLOCO carga 
+            --> Se devuelve menor distancia a carga o a detonador*/
+obtenerHeuristica(Nodo,ValorH):-
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,si],     
+    \+ member([d,_,_], ListaPosesiones), 
+    \+ member([c,_,_],ListaPosesiones),
+    estaEn([c,_],[PosXCarga,PosYCarga]),
+    estaEn([d,_,_],[PosXDet,PosYDet]),
+    Pos = [X,Y],
+    DistanciaCarga is abs(X-PosXCarga) + abs(Y-PosYCarga),
+    DistanciaDetonador is abs(X-PosXDet) + abs(Y-PosYDet),
+    ValorH is min(DistanciaCarga,DistanciaDetonador).
+
 
 /*------------------------------------------------------------------*/
 
-/*---------------------------AUXILIARES-----------------------------*/
+/*---------------------------AUXILIARES HEURISTICAS-----------------------------*/
 
-/*minimo_frontera(MinimoNodo):-
-    findall(Nodo,frontera(Nodo),ListaNodosFrontera),
-    minimoF(MinimoNodo,ListaNodosFrontera). 
+/* Menor distancia a sitio de detonacion */
+menorDistanciaASitioDetonacion([X1,Y1], [X2, Y2], [], MenorDistancia):-
+	MenorDistancia is abs(X1-X2) + abs(Y1-Y2).  /* Calculo distancia de Manhattan */
 
-minimoF(Nodo,[X|ListaNodos]):-
-    minimoAux(Nodo,X,ListaNodos).
-
-minimoAux(Nodo,Nodo,[]):-!.
-
-minimoAux(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
-    Nodo1= [_,_,_,Costo1],
-    Nodo2= [_,_,_,Costo2],
-    Costo1=<Costo2,
-    !,
-    minimoAux(Nodo1,Nodo3,ListaNodos).
-
-minimoAux(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
-    Nodo3 = [_,_,_,Costo3],
-    Nodo2 = [_,_,_,Costo2],
-    Costo3>=Costo2,
-    minimoAux(Nodo1,Nodo2,ListaNodos).*/
+menorDistanciaASitioDetonacion([PosX,PosY], [X1, Y1], [[X2, Y2]|Resto], MenorDistancia) :-
+	Distancia1 is abs(PosX-X1) + abs(PosY-Y1),  
+	Distancia2 is abs(PosX-X2) + abs(PosY-Y2),
+    Distancia1 < Distancia2  -> menorDistanciaASitioDetonacion([PosX,PosY],[X1, Y1],Resto,MenorDistancia) 
+                             ;
+							  menorDistanciaASitioDetonacion([PosX,PosY],[X2, Y2],Resto,MenorDistancia).
 
 
+/*--------------------------------------------------------------------------------*/
 
-
-
-
-
-
-
-
-
+/*-----------------------------AUXILIARES ESTRUCTURAS (NODOS)---------------------*/
 /* minimo_frontera(-MinimoNodo) */
 minimo_frontera(MinimoNodo):-
     findall(Nodo,frontera(Nodo),[PrimerNodo|Resto]),
@@ -145,40 +170,16 @@ minimo([Estado1,Camino1,CostoNodo1,CostoTotal1],[[Estado2,Camino2,CostoNodo2,Cos
                                  ; 
                                  minimo([Estado2,Camino2,CostoNodo2,CostoTotal2],Resto,Minimo).
 
-/* esMeta(+Estado) 
-    -No debe tener la carga pendiente 
-    -Tiene que tener activado el detonador
-    Tiene que estar en el sitio de detonación */
-
+/* esMeta(+Estado) */
 esMeta(Nodo):-
     Nodo=[Estado,_,_,_],
     Estado=[Pos,_,ListaPosesiones,no],
-    member([d,_,_],ListaPosesiones),  /* tiene que estar en si el tercer argumento? */
+    member([d,_,_],ListaPosesiones), 
     sitioDetonacion(Pos).
 
-
-/* Menor distancia a meta */
-menorDistanciaAMeta(Pos, Valor):- findall(X, esMeta(X), ListaMetas), metaDeMenorDistancia(Pos, ListaMetas, Valor).
-
-
-/* Meta de menor distancia */
-metaDeMenorDistancia(Pos, [Meta|Metas], ValorActual):- distanciaManhattan(Pos, Meta, ValorActual),
- metaDeMenorDistancia(Pos, Metas, ValorRecursivo), ValorActual < ValorRecursivo.
-
-metaDeMenorDistancia(Pos, [Meta|Metas], ValorRecursivo):- distanciaManhattan(Pos, Meta, ValorActual),
- metaDeMenorDistancia(Pos, Metas, ValorRecursivo), ValorActual >= ValorRecursivo.
-
-metaDeMenorDistancia(Pos,[Meta], Valor):- distanciaManhattan(Pos, Meta, Valor).
-    
-/* Calculo distancia de Manhattan */
-distanciaManhattan([Pos1X, Pos1Y], [Pos2X, Pos2Y], Valor):- Valor is abs(Pos1X-Pos2X) + abs(Pos1Y-Pos2Y).
-
-
-/* Se vacian estructuras para realizar nuevas consultas sin necesidad de cerrar y abrir nuevamente el archivo */
 limpiar_estructuras():-
 	retractall(frontera(_)),
 	retractall(visitados(_)).
-
 
 
 /*********************************************************************/
