@@ -8,7 +8,7 @@
 
 /* Generar vecinos */
 generar_vecinos([Estado,Camino,CostoNodo,_],VecinosAgregar):-
-    findall([EstadoSiguiente,[Operacion|Camino],CostoTotal],accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal),Vecinos).
+    findall([EstadoSiguiente,[Operacion|Camino],CostoTotal],accion_agente(Estado,EstadoSiguiente,Operacion,CostoNodo,CostoTotal),Vecinos),
     control_visitados(Vecinos,VecinosAgregar).
 
 /* Cascara accion agente */
@@ -46,7 +46,6 @@ algoritmoA*(Nodo):-
 /* Caso Recursivo */
 algoritmoA*(Nodo):-
     minimo_frontera(Minimo),
-    writeln(Minimo),
     generar_vecinos(Minimo,Vecinos),
     retract(frontera(Minimo)),
     agregar_vecinos(Vecinos),
@@ -58,7 +57,7 @@ buscar_plan(EstadoInicial,Plan,Destino,Costo):-
     /* En frontera tengo nodos de la forma: [Estado,Camino,CostoNodo,CostoTotal] */
     /* El EstadoInicial es de la forma: [Pos,Dir,ListaPosesiones,CargaPendiente] */
     limpiar_estructuras(),
-    assertz(frontera([EstadoInicial,[],0,0])),
+    assertz(frontera([EstadoInicial,[],0,0])), 
     algoritmoA*(NodoMeta),
     NodoMeta = [EstadoMeta,Camino,Costo,_],
     EstadoMeta= [Destino,_,_,_],
@@ -72,20 +71,20 @@ buscar_plan(_,_,_,_):-
 
 /* Desde la mas restrictiva a la mas general */
 
-/* Caso 1 : TIENE detonador, COLOCO carga --> Hay que ir a un sitio de detonacion */
+/* Caso 1 : TIENE detonador, COLOCO carga --> Se devuelve menor distancia a un sitio de detonacion */
 obtenerHeuristica(Nodo,ValorH):-
-        /*En Nodo viene, por ejemplo:  [[[12,2],e,[[d,d1,no],[c,c1]],no],[caminar],3] */
-        Nodo= [Estado,_,_],
-        Estado= [Pos,_,ListaPosesiones,no],
-        member([d,_,_],ListaPosesiones),
-        findall(Posicion, sitioDetonacion(Posicion), [Primera|Resto]),
-	    menorDistanciaASitioDetonacion(Pos, Primera, Resto, ValorH).
+    /*En Nodo viene, por ejemplo:  [[[12,2],e,[[d,d1,no],[c,c1]],no],[caminar],3] */
+    Nodo= [Estado,_,_],
+    Estado= [Pos,_,ListaPosesiones,no],
+    member([d,_,_],ListaPosesiones),
+    findall(Posicion, sitioDetonacion(Posicion), [Primera|Resto]),
+	menorDistanciaASitioDetonacion(Pos, Primera, Resto, ValorH).
     
 /* Caso 2 : NO TIENE detonador, COLOCO carga  --> Se devuelve distancia a detonador */
 obtenerHeuristica(Nodo,ValorH):-
     Nodo= [Estado,_,_],
     Estado= [Pos,_,ListaPosesiones,no],
-    \+ member([d,_,_], ListaPosesiones),
+    not(member([d,_,_], ListaPosesiones)),
     estaEn([d,_,_],[PosXDet,PosYDet]),
     Pos = [X,Y],
     ValorH is abs(X-PosXDet) + abs(Y-PosYDet).
@@ -105,7 +104,7 @@ obtenerHeuristica(Nodo,ValorH):-
     Nodo= [Estado,_,_],
     Estado= [Pos,_,ListaPosesiones,si],
     member([d,_,_],ListaPosesiones),
-    \+ member([c,_,_],ListaPosesiones),
+    not(member([c,_,_],ListaPosesiones)),
     estaEn([c,_],[PosXCarga,PosYCarga]),
     Pos = [X,Y],
     ValorH is abs(X-PosXCarga) + abs(Y-PosYCarga).
@@ -115,7 +114,7 @@ obtenerHeuristica(Nodo,ValorH):-
 obtenerHeuristica(Nodo,ValorH):-
     Nodo= [Estado,_,_],
     Estado= [Pos,_,ListaPosesiones,si],     
-    \+ member([d,_,_], ListaPosesiones), 
+    not(member([d,_,_], ListaPosesiones)), 
     member([c,_,_],ListaPosesiones),
     ubicacionCarga([PosXUbic,PosYUbic]),
     estaEn([d,_,_],[PosXDet,PosYDet]),
@@ -129,8 +128,8 @@ obtenerHeuristica(Nodo,ValorH):-
 obtenerHeuristica(Nodo,ValorH):-
     Nodo= [Estado,_,_],
     Estado= [Pos,_,ListaPosesiones,si],     
-    \+ member([d,_,_], ListaPosesiones), 
-    \+ member([c,_,_],ListaPosesiones),
+    not(member([d,_,_], ListaPosesiones)), 
+    not(member([c,_,_],ListaPosesiones)),
     estaEn([c,_],[PosXCarga,PosYCarga]),
     estaEn([d,_,_],[PosXDet,PosYDet]),
     Pos = [X,Y],
@@ -179,13 +178,10 @@ esMeta(Nodo):-
     member([d,_,si],ListaPosesiones). 
 
 
-/* Control visitados */
-% SE REALIZA EL CONTROL DE VISITADOS DE LOS POTENCIALES VECINOS DE UN
-% NODO
-%control_visitados(+Vecinos,-VecinosAgregar):
+/* control_visitados(+Vecinos,-VecinosAgregar): */
 control_visitados([],[]):-!.
 
-%caso1
+/* Caso 1 : Control frontera- Es posible alcanzar un determiando estado por un mejor camino que el asociado al nodo actual */
 control_visitados(Vecinos,VecinosAgregar):-
 	Vecinos=[Nodo|RestoVecinos],
     Nodo= [Estado,Camino,CostoNodo,CostoTotal],
@@ -195,7 +191,7 @@ control_visitados(Vecinos,VecinosAgregar):-
     assertz(frontera([Estado,Camino,CostoNodo,CostoTotal])),
 	control_visitados(RestoVecinos,VecinosAgregar).
 
-%caso 2
+/* Caso 2 : Control visitados- Es posible alcanzar un determiando estado por un mejor camino que el asociado al nodo actual*/
 control_visitados(Vecinos,VecinosAgregar):-
     Vecinos=[Nodo|RestoVecinos],
     Nodo= [Estado,Camino,CostoNodo,CostoTotal],
@@ -205,7 +201,7 @@ control_visitados(Vecinos,VecinosAgregar):-
     assertz(frontera(nodo(Estado,Camino,CostoNodo,CostoTotal))),
     control_visitados(RestoVecinos,VecinosAgregar).
 
-%caso 3: para frontera
+/* Caso 3 : Control frontera-  No se efectúan cambios en la	Frontera*/
 control_visitados(Vecinos,VecinosAgregar):-
     Vecinos=[Nodo|RestoVecinos],
     Nodo= [Estado,_,_,CostoTotal],
@@ -214,17 +210,16 @@ control_visitados(Vecinos,VecinosAgregar):-
     control_visitados(RestoVecinos,VecinosAgregar).
 	
 
-%caso 3:para visitados
+/* Caso 3: Control visitados - No se efectúan cambios en los Visitados */
 control_visitados(Vecinos,VecinosAgregar):-
-	Vecinos=[Nodo|RestoVecinos],
-	Nodo=nodo(Estado,_,G,H),
-	F is G+H,
-	visitados(nodo(Estado,_,G1,H1)),
-	F1 is G1+H1,
-	F>=F1,!,
-	control_visitados(RestoVecinos,VecinosAgregar).
+    Vecinos=[Nodo|RestoVecinos],
+    Nodo= [Estado,_,_,CostoTotal],
+    visitados([Estado,_,_,CostoTotal1]),
+    CostoTotal > CostoTotal1, !,
+    control_visitados(RestoVecinos,VecinosAgregar).
 
-%caso 4:
+/* Caso 4 : Si no existe en la Frontera ni en el conjunto de Visitados un nodo N etiquetado con el estado E, 
+entonces agregamos a la Frontera el nodo N2 */	
 control_visitados([Nodo|RestoVecinos],[Nodo|VecinosAgregar]):-
 	control_visitados(RestoVecinos,VecinosAgregar).
 

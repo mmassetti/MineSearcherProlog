@@ -67,13 +67,13 @@ girar([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente], DirDestino, [Pos, Di
 girar([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente], DirDestino, [Pos, DirDestino, ListaPosesiones,ColocacionCargaPendiente], 2):- distancia180grados(Dir, DirDestino).
 
 saltar([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[PosDestino,Dir,ListaPosesiones,ColocacionCargaPendiente],Costo):- 
-    celdaDestino(Pos,PosDestino,saltar, Dir), /*Celda a donde quiero saltar */
+    celdaDestino(Pos,PosDestino,saltar, Dir), 
     libreDeObstaculos(PosDestino),
     celda(PosDestino,TipoSuelo),
     suelo(TipoSuelo,CostoSuelo),
-    celdaDestino(Pos,PosObstaculo,avanzar,Dir),  /* Celda por la que tengo que saltar */
-    estaEn([v,_,Altura],PosObstaculo),  /* Solo puedo saltar vallas */
-    Altura < 4,  /*Con altura menor a 4 */
+    celdaDestino(Pos,PosObstaculo,avanzar,Dir),  
+    estaEn([v,_,Altura],PosObstaculo),  
+    Altura < 4, 
     Costo is 1 + CostoSuelo.
 
 juntar_llave([Pos, Dir, ListaPosesiones,ColocacionCargaPendiente],[Pos,Dir,NuevaListaPosesiones,ColocacionCargaPendiente], Costo):-
